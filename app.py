@@ -1,26 +1,30 @@
+import os
 import pandas as pd
 import joblib
 import requests
-import os
 from flask import Flask, request, render_template_string
 
-# Load dataset (if you actually use it somewhere — otherwise you can remove this line)
-df = pd.read_csv('dataset_full.csv')
+# ✅ Load dataset if needed
+df = pd.read_csv('dataset_full.csv')  # Or remove if not required
 
-# 🔽 Download + load the model
+# ✅ Download + cache model
 model_url = 'https://drive.google.com/uc?export=download&id=1Pqje1SPmWHl2YAipDAuxBSzQLNHSTWzn'
 model_path = 'model.pkl'
 
-if not os.path.exists(model_path):  # ✅ Download only if not present
+if not os.path.exists(model_path):
+    print("Downloading model...")
     response = requests.get(model_url)
     with open(model_path, 'wb') as f:
         f.write(response.content)
+    print("Model downloaded.")
 
+# ✅ Load model
 model = joblib.load(model_path)
 
-# Set up Flask app
+# ✅ Set up Flask app
 app = Flask(__name__)
 
+# ✅ HTML form
 html = '''
 <!DOCTYPE html>
 <html lang="en">
@@ -97,8 +101,6 @@ def index():
     result = ''
     if request.method == 'POST':
         url = request.form['url']
-
-        # Simulate simple feature extraction
         features = [len(url), int('https' in url.lower()), int('.com' in url.lower()), len(url.split('/'))]
 
         try:
@@ -108,10 +110,9 @@ def index():
             else:
                 result = "<span style='color: green;'>Legitimate URL</span>"
         except Exception as e:
-            result = f"<span style='color: red;'>Error making prediction: {e}</span>"
+            result = f"Error: {e}"
 
     return render_template_string(html, result=result)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+# No need for app.run() — Gunicorn handles it
 
