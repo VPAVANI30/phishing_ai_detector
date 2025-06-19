@@ -1,6 +1,7 @@
-flask
+Flask
+gunicorn
 pandas
-scikit-learn
 joblib
 requests
-gunicorn
+scikit-learn
+
