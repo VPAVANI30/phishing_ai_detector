@@ -1,0 +1,37 @@
+import pandas as pd
+import re
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+import joblib
+from flask import Flask, request, render_template_string
+
+# Load dataset
+df = pd.read_csv('dataset_full.csv')
+
+# Assume last column is label
+label_col = df.columns[-1]
+
+X = df.drop(columns=[label_col])
+y = df[label_col]
+
+# Train model
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+joblib.dump(model, 'model.pkl')
+model = joblib.load('model.pkl')
+
+# Feature extractor
+def extract_features(url):
+    return pd.DataFrame([{
+        'URL_Length': len(url),
+        'having_At_Symbol': 1 if '@' in url else 0,
+        'double_slash_redirecting': 1 if '//' in url[7:] else 0,
+        'Prefix_Suffix': 1 if '-' in url else 0,
+        'having_IP_Address': 1 if re.match(r"(http[s]?://)?\d+\.\d+\.\d+\.\d+", url) else 0
+    }])
+
+# Flask app
+app = Flask(__name__)
+
