@@ -1,36 +1,26 @@
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
 import joblib
-from flask import Flask, request, render_template_string
 import requests
+import os
+from flask import Flask, request, render_template_string
 
-# Load dataset (optional if your app uses it)
+# Load dataset (if you actually use it somewhere — otherwise you can remove this line)
 df = pd.read_csv('dataset_full.csv')
-label_col = df.columns[-1]
-X = df.drop(columns=[label_col])
-y = df[label_col]
 
-# ✅ DOWNLOAD + LOAD MODEL
-# Replace with your actual direct link to model.pkl
-model_url = 'https://drive.google.com/file/d/1Pqje1SPmWHl2YAipDAuxBSzQLNHSTWzn/view?usp=sharing'  # Example: 'https://drive.google.com/uc?export=download&id=FILE_ID'
+# 🔽 Download + load the model
+model_url = 'https://drive.google.com/uc?export=download&id=1Pqje1SPmWHl2YAipDAuxBSzQLNHSTWzn'
+model_path = 'model.pkl'
 
-try:
-    print("Downloading model...")
-    r = requests.get(model_url)
-    with open('model.pkl', 'wb') as f:
-        f.write(r.content)
-    print("Download complete. Loading model...")
-    model = joblib.load('model.pkl')
-    print("Model loaded successfully.")
-except Exception as e:
-    print(f"Error loading model: {e}")
-    model = None
+if not os.path.exists(model_path):  # ✅ Download only if not present
+    response = requests.get(model_url)
+    with open(model_path, 'wb') as f:
+        f.write(response.content)
 
-# ✅ Set up Flask app
+model = joblib.load(model_path)
+
+# Set up Flask app
 app = Flask(__name__)
 
-# ✅ HTML for your form
 html = '''
 <!DOCTYPE html>
 <html lang="en">
@@ -102,33 +92,26 @@ html = '''
 </html>
 '''
 
-# ✅ Flask route
 @app.route('/', methods=['GET', 'POST'])
 def index():
     result = ''
     if request.method == 'POST':
         url = request.form['url']
 
-        # 📝 Simulate extracting features from URL (replace with real feature extraction)
+        # Simulate simple feature extraction
         features = [len(url), int('https' in url.lower()), int('.com' in url.lower()), len(url.split('/'))]
 
-        # Make sure model is loaded
-        if model:
-            try:
-                pred = model.predict([features])[0]
-                if pred == 1:
-                    result = "<span style='color: red;'>Phishing URL</span>"
-                else:
-                    result = "<span style='color: green;'>Legitimate URL</span>"
-            except Exception as e:
-                result = f"Error making prediction: {e}"
-        else:
-            result = "<span style='color: red;'>Model not loaded.</span>"
+        try:
+            pred = model.predict([features])[0]
+            if pred == 1:
+                result = "<span style='color: red;'>Phishing URL</span>"
+            else:
+                result = "<span style='color: green;'>Legitimate URL</span>"
+        except Exception as e:
+            result = f"<span style='color: red;'>Error making prediction: {e}</span>"
 
     return render_template_string(html, result=result)
 
-# ✅ Run app
-if __name__ == '__main__':
-    app.run(debug=True)
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
